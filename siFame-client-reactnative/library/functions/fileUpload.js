@@ -50,8 +50,7 @@ async function uploadImageAsync(imgParam, userParam) {
        return await fetch(apiUrl,options)
           .then(response => response.json())
           .then(response => {
-              console.log(response.result);
-              return response;
+              return response.result;
           });
           
   }

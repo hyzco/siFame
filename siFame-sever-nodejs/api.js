@@ -26,7 +26,7 @@ var storageProfile = multer.diskStorage({
       cb(null, 'profile-' + new Date().toISOString() + '.' + filetype);
     },
     limits: {
-    fieldSize: 8 * 1024 * 1024,
+    fieldSize: 3 * 1024 * 1024,
   },
 });
 
@@ -188,6 +188,7 @@ function calculateMostN(data,size){
 	var items = data.slice(0, size).map((value,i) => ({
 			id: value.id,
 			distance : value.distances,
+			info: value.info,
 	}))
 		return items;
 }
@@ -302,6 +303,7 @@ const setUpExpress = () => {
 	});
 	
 			app.post('/uploadPicture', uploadProfile.single("photoTest"), (req, res) => {
+				console.log(req.file);
 				const file = req.file;
 				const user = req.body;
 				var data ={}
@@ -309,34 +311,45 @@ const setUpExpress = () => {
 					var fileName = '512x512-'+file.filename+'.jpg';
 						sharp(file.path).resize(512,512).toFile('./uploads/userPic/'+fileName, async function(err){
 							if(err){
-								res.status(200).json({
+								res.status(400).json({
 									success: false,
 									message: "Retrieved data is not success",
 								});
 								res.end();
 							}
 							else{
-									 data = {
-										name : user.name,
-										surname: user.surname,
-										image: fileName,
-										age: user.age,
-										nationality: user.nationality,
-										gender: user.gender
-									};
+								const checkIfFace = await faceRecog.checkIfFace(fileName);
 
-									DB.InsertData(data,true);
-
-									res.status(200).json({
-										success: true,
-										message: "Retrieved data success",
-										user: {
-											image:data.image,
-											gender:data.gender,
-										},
-									});
-			
-									res.end();
+									if(checkIfFace){
+										data = {
+											name : user.name,
+											surname: user.surname,
+											image: fileName,
+											age: user.age,
+											nationality: user.nationality,
+											gender: user.gender
+										};
+	
+										DB.InsertData(data,true);
+	
+										res.status(200).json({
+											success: true,
+											message: "Retrieved data success",
+											user: {
+												image:data.image,
+												gender:data.gender,
+											},
+										});
+				
+										res.end();
+									}else{
+										res.status(400).json({
+											success: false,
+											message: "Sorry, we could not find any face.",
+										});
+										res.end();
+									}
+		
 							}
 					})
 				}
@@ -375,6 +388,7 @@ const setUpExpress = () => {
 			const resultFaceRecog = await faceRecog.faceRecog(getUserData,getFameData)
 			const result = calculateMostN(resultFaceRecog,6);
 			
+
 			res.status(200).json({
 				success: true,
 				message: "Retrieved data success",

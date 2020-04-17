@@ -60,9 +60,7 @@ function saveFile(fileName, buf) {
     fs.writeFileSync(path.resolve(baseDir, fileName), buf)
   }
 
-async function run(image,fame) {
-  
-
+async function run(image) {
     const rand = random(1,9);
     // load the imagea
     const img = await canvas.loadImage(photo_user_location+"/"+image.imageUser);
@@ -99,6 +97,20 @@ console.log(result.descriptor);
 */
   }
 
+async function checkIfFace(image){
+  await loadWeights();
+  const img = await canvas.loadImage(photo_user_location+"/"+image);
+  const result = await faceapi.detectSingleFace(img, faceDetectionOptions).
+  withFaceLandmarks().
+  withFaceDescriptor();
+    if(result === undefined){
+        return false;
+    }else{
+      return true;
+    }
+}
+
+
 function random(low, high) {
   return Math.random() * (high - low) + low
 }
@@ -108,6 +120,7 @@ async function computeDescriptor(image){
                       id: image[i].id,
                       descriptor: await faceapi.detectSingleFace(image[i].image,faceDetectionOptions).withFaceLandmarks().withFaceDescriptor(),
                       gender: image[i].gender,
+                      info: value.fameInfo,
       }))
       return await Promise.all(result);
 }
@@ -117,6 +130,7 @@ async function computeDistance(descriptor){
             id: value.id,
             distances: descriptor[0].descriptor === undefined ? 0 : faceapi.euclideanDistance(descriptor[0].descriptor.descriptor,descriptor[i].descriptor.descriptor),               
             gender: value.gender,
+            info: value.info,
         }))  
    return await Promise.all(result);
 }
@@ -133,6 +147,13 @@ async function canvasLoadImg(imageDB){
         id: value._id,
         image: await canvas.loadImage(photo_location+value.image),
         gender: value.gender,
+        fameInfo:{
+            name: value.name,
+            surname: value.surname,
+            age: value.age,
+            nationality: value.nationality,
+            description: value.description,
+        }
       })
   })
   return canvasImgArr;
@@ -166,4 +187,5 @@ async function faceRecog(userImage, imageFame){
 
 module.exports ={
     faceRecog,
+    checkIfFace,
 }
