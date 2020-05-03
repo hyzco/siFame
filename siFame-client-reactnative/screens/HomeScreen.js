@@ -1,22 +1,49 @@
-import React, {useState  } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import React, {useCallback, useState, useRef} from 'react';
+import { Image, Platform, StyleSheet, View, FlatList,Text,  ImageBackground, KeyboardAvoidingView } from 'react-native';
 import { MonoText } from '../components/StyledText';
 import * as ImagePicker from 'expo-image-picker';
 import { ListItem } from 'react-native-elements'
 import TouchableScale from 'react-native-touchable-scale'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from "../components/Toast";
-import Background from "../components/Background";
 import Logo from "../components/Logo";
-import Header from "../components/Header";
 import Button from "../components/Button";
 import Paragraph from "../components/Paragraph";
 import {theme} from "../library/theme";
 import {uploadImageAsync,postReqAI} from '../library/functions/fileUpload';
+import * as MediaLibrary from 'expo-media-library';
 
+import * as Sharing from 'expo-sharing';
+import ViewShot from 'react-native-view-shot';
 
 export default function HomeScreen({ navigation, route }) {
+  const { mail,name,surname } = route.params.user;
+//mail eklenecek !,
+  const user = {
+    name: name.value,
+    surname: surname.value,
+    age: 0,
+    nationality: "null",
+  }
+
+  const colors =[{
+     color: '#9900EF',
+     color1:'#2196F3'
+    },{
+      color: '#FCB900',
+      color1:'#00D084'
+     },{
+      color: '#9900EF',
+      color1:'#EB144C'
+     },{
+      color: '#0693E3',
+      color1:'#7BDCB5'
+     },{
+      color: '#00D084',
+      color1:'#9900EF'
+     },
+  ]
+
   const [state, setState] = useState({
             isStartProcessButton : false,
             userData:{
@@ -31,8 +58,19 @@ export default function HomeScreen({ navigation, route }) {
    const [success, setSuccess] = useState("");
    const [loadingUpload, setLoadingUpload] = useState(false);
    const [loadingGetValue, setLoadingGetValue] = useState(false);
+   const [preview, setPreview] = useState(null);
+   const [processFinish, setProcessFinish] = useState(false);
+ 
+   const full = useRef();
 
-     
+      const onCapture = useCallback(() => {
+        full.current.capture().
+        then((uri) =>{ 
+          setPreview({ uri })
+          openShareDialogAsync(uri);
+          MediaLibrary.saveToLibraryAsync(uri);
+        });
+      }, []);
 
       let keyExtractor = (item, index) => index.toString()
    
@@ -55,19 +93,20 @@ export default function HomeScreen({ navigation, route }) {
               subtitleStyle={{ color: 'white',fontSize: 10}}
               subtitle={item.description}
               chevron={{ color: 'white' }}
-              badge={{ value: "%"+(1-item.distance).toFixed(2), textStyle: { color: 'black', fontWeight: 'bold' } ,
+              badge={{ value: "%"+Math.round(((1-item.distance).toFixed(2)*100)), textStyle: { color: 'black', fontWeight: 'bold' } ,
                badgeStyle:{ backgroundColor: "white",borderColor: "black",borderWidth:1} }}
             
             />
       )
 
-      const user = {
-        name: "Hasan Ali",
-        surname: "Yüzgeç",
-        age: 21,
-        nationality: "Turkish",
-        gender: "Male"
-      }
+      let openShareDialogAsync = async (uri) => {
+        if (!(await Sharing.isAvailableAsync())) {
+          alert(`Uh oh, sharing isn't available on your platform`);
+          return;
+        }
+    
+        Sharing.shareAsync(uri);
+      };
 
       let openImagePickerAsync = async (userParam) =>{
                       let permissionResult = await ImagePicker.requestCameraRollPermissionsAsync();
@@ -86,6 +125,7 @@ export default function HomeScreen({ navigation, route }) {
                             setLoadingUpload(false);
                             setLoadingGetValue(false);
                             setListArr([]);
+                            setProcessFinish(false);
                                 setState({
                                     isStartProcessButton:true,
                                     userData:{
@@ -100,9 +140,12 @@ export default function HomeScreen({ navigation, route }) {
                               setState({
                                 isStartProcessButton: false,
                               })
+                              setProcessFinish(false);
                               setError(response.message);
                             }
                         }).catch(error =>{
+                            setError("We had a little problem. :(  Please try again.")
+                            setLoadingUpload(false);
                         })
                       }else{
                         setListArr([]);
@@ -110,7 +153,7 @@ export default function HomeScreen({ navigation, route }) {
                             setState({isStartProcessButton:false,
                             listRefresh:true});
                           }
-                         
+                          setProcessFinish(false);
                       }
               }
 
@@ -128,13 +171,14 @@ export default function HomeScreen({ navigation, route }) {
             if(fameResults !== undefined){
               var newArr = fameResults.slice(1);
               try{
-                newArr.map((value)=>{
+                newArr.map((value,i)=>{
+                  console.log(value);
                       tmpArr.push({
                         id: value.id,
                         name: (value.info.name+" "+value.info.surname),
-                        avatar_url: 'https://s3.amazonaws.com/uifaces/faces/twitter/ladylexy/128.jpg',
+                        avatar_url: 'http://185.184.24.14/getDataFamePic/'+value.info.image,
                         subtitle: 'Vice President',
-                        color:['#FF9800', '#F44336'],
+                        color:[colors[i].color, colors[i].color1],
                         distance: value.distance,
                         description: value.info.description,
                         nationality: value.info.nationality,
@@ -152,17 +196,29 @@ export default function HomeScreen({ navigation, route }) {
                       setState({
                         isStartProcessButton:false,
                        })
+                       setProcessFinish(true);
                   }
             }
        
     }        
 
       return (
-        <Background>
-        <Logo />  
+        
+        <ImageBackground
+        source={require("../assets/background_dot.png")}
+        resizeMode="repeat"
+        style={styles.background}
+      >
+        
+        <KeyboardAvoidingView style={styles.container} behavior="padding">
+       <Logo> </Logo>  
+       
+       {processFinish  ? null : 
         <Paragraph>
-            SiFame Test Face Recog with Fame People. v.0.5.0
+           SiFame Test Face Recog with Fame People. v.0.5.0
         </Paragraph>
+        }
+
         <Button
         loading={loadingUpload}
         style={{backgroundColor: theme.colors.primary }}
@@ -170,7 +226,8 @@ export default function HomeScreen({ navigation, route }) {
         onPress={()=>{openImagePickerAsync(user)}}
         style={styles.button}
       >
-        Upload Selfıe
+        {processFinish? "Try Agaın" : "Upload Selfıe"}
+
       </Button>
       {state.isStartProcessButton &&
         <Button
@@ -184,8 +241,17 @@ export default function HomeScreen({ navigation, route }) {
       </Button>
     }
 
-           <View style={styles.containerContent}>
+   <Image
+              fadeDuration={0}
+              resizeMode="contain"
+              style={{width:0,height:0}}
+              source={preview}
+            />
+
+ <ViewShot ref={full} style={styles.containerContent} options={{quality:1}}>
+        {processFinish &&  <MonoText>{name.value+" "+surname.value} look like 🌟</MonoText> } 
                 <FlatList
+                style={{width: '80%'}}
                 showsHorizontalScrollIndicator={false}
                   keyExtractor={keyExtractor}
                   data={listArr}
@@ -193,11 +259,24 @@ export default function HomeScreen({ navigation, route }) {
                   extraData={listArr}
                   renderItem={renderItem}
                 />
-          </View>
+              {processFinish &&  <MonoText>#siFame - sifame.com ❤️</MonoText> }
+  </ViewShot>
+     
+  {processFinish &&
+            <Button
+            style={{backgroundColor: theme.colors.primary }}
+            loading={false}
+            mode="contained"
+            onPress={()=>{onCapture()}}
+            style={styles.button}
+          >
+              Save Image
+          </Button>
+}   
       <Toast message={success} type={"success"} onDismiss={() => setSuccess("")} />
       <Toast message={error} type={"error"} onDismiss={() => setError("")} />
-      </Background>
-
+      </KeyboardAvoidingView>
+  </ImageBackground>
   
       );
     }
@@ -209,7 +288,23 @@ HomeScreen.navigationOptions = {
 
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: 'white',
+  },
+  container: {
+    flex: 1,
+    padding: 20,
+    width: "100%",
+   // maxWidth: 340,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center"
+  },
   containerContent: {
+    alignItems: "center",
+    backgroundColor: 'white',
     width:"100%",
   },
   item: {
@@ -220,6 +315,7 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary
   },
   button: {
+    maxWidth: 250,
     marginTop: 24,
     backgroundColor: theme.colors.primary,
   },
@@ -239,6 +335,17 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginTop:15,
         marginBottom:1
-  }
- 
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  bottomModal: {
+    justifyContent: 'flex-end',
+    margin: 0,
+  },
 });

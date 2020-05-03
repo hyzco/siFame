@@ -42,6 +42,7 @@ async function loadWeights(){
     await faceDetectionNet.loadFromDisk(weight_location);
     await faceapi.nets.faceLandmark68Net.loadFromDisk(weight_location);
     await faceapi.nets.faceRecognitionNet.loadFromDisk(weight_location); 
+    await faceapi.nets.ageGenderNet.loadFromDisk(weight_location);
   }catch(err){
     return "Weights could not loaded successfully.";
   }finally{
@@ -102,11 +103,12 @@ async function checkIfFace(image){
   const img = await canvas.loadImage(photo_user_location+"/"+image);
   const result = await faceapi.detectSingleFace(img, faceDetectionOptions).
   withFaceLandmarks().
+  withAgeAndGender().
   withFaceDescriptor();
     if(result === undefined){
         return false;
     }else{
-      return true;
+      return result;
     }
 }
 
@@ -128,7 +130,7 @@ async function computeDescriptor(image){
 async function computeDistance(descriptor){
         const result = await descriptor.map(async (value, i) => ({ 
             id: value.id,
-            distances: descriptor[0].descriptor === undefined ? 0 : faceapi.euclideanDistance(descriptor[0].descriptor.descriptor,descriptor[i].descriptor.descriptor),               
+            distances: (descriptor[i].descriptor ===undefined || descriptor[0].descriptor ===undefined) ? null : faceapi.euclideanDistance(descriptor[0].descriptor.descriptor,descriptor[i].descriptor.descriptor),               
             gender: value.gender,
             info: value.info,
         }))  
@@ -153,6 +155,7 @@ async function canvasLoadImg(imageDB){
             age: value.age,
             nationality: value.nationality,
             description: value.description,
+            image: value.image,
         }
       })
   })
@@ -176,13 +179,18 @@ async function faceRecog(userImage, imageFame){
     const canvasImage =  await canvasLoadImg(imageDB);
     const descriptor =   await computeDescriptor(canvasImage);
     const distances = await computeDistance(descriptor);
+
+    var filteredDistances = distances.filter(function (el) {
+      return el.distances != null;
+    });
+    
    /*run({
       imageUser : imageDB.userImage.responseImage.image,
     },{
       fameUser: imageDB.imageFame[1].image,
     });*/
-
-       return distances;
+console.log(filteredDistances);
+       return filteredDistances;
   }
 
 module.exports ={

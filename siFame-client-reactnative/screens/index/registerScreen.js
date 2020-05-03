@@ -17,11 +17,11 @@ import Toast from "../../components/Toast";
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState({ value: "", error: "" });
+  const [surname, setSurname] = useState({ value: "", error: "" });
   const [email, setEmail] = useState({ value: "", error: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [gender, setGender] = useState({ value: "first" });
 
 
   const _onSignUpPressed = async () => {
@@ -45,12 +45,15 @@ const RegisterScreen = ({ navigation }) => {
         setSuccess("Great !");
         const user = {
             name: name,
+            surname: surname,
             mail: email,
-            gender: gender,
         }    
     
         setTimeout(()=>{
-            navigation.navigate("Root", {user:user});
+                navigation.navigate('Root', {
+                  screen: 'Home',
+                  params: {user:user},
+                });
         },1000)
     }
 
@@ -80,6 +83,15 @@ const RegisterScreen = ({ navigation }) => {
         errorText={name.error}
       />
 
+       <TextInput
+        label="Surname"
+        returnKeyType="next"
+        value={surname.value}
+        onChangeText={text => setSurname({ value: text, error: "" })}
+        error={!!surname.error}
+        errorText={surname.error}
+      />
+
       <TextInput
         label="Email"
         returnKeyType="next"
@@ -93,17 +105,6 @@ const RegisterScreen = ({ navigation }) => {
         keyboardType="email-address"
       />
 
-    <RadioButton.Group
-        onValueChange={value => setGender({value:value})}
-        value={gender.value}
-        
-    >
-        <View style={{flexDirection:"row"}}>
-            <RadioButton.Item  theme={{ colors: { primary: theme.colors.secondary}}} label="Male" value="first" />
-            <RadioButton.Item theme={{ colors: { primary: theme.colors.secondary }}}  label="Female" value="second" />
-        </View>
-      </RadioButton.Group>
-
       <Button
         loading={loading}
         mode="contained"
@@ -115,7 +116,7 @@ const RegisterScreen = ({ navigation }) => {
 
       <View style={styles.row}>
         <Text style={styles.label}>Hey buddy! Try AI version for </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("LoginScreen")}>
+        <TouchableOpacity onPress={() => alert("Soon")}>
           <Text style={styles.link}>Instagram</Text>
         </TouchableOpacity>
       </View>

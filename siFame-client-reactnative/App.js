@@ -66,14 +66,17 @@ export default function App(props) {
         {Platform.OS === 'ios' && <StatusBar barStyle="default" />}
         <NavigationContainer ref={containerRef} initialState={initialNavigationState}>
           <Stack.Navigator>
+            
             <Stack.Screen options={{headerShown: false, transitionSpec: {
       open: config,
       close: config,
     },gestureDirection:"vertical"}} name = "welcomeScreen" component={welcomeScreen} initialState ={true} />
+
             <Stack.Screen options={{headerShown: false,  transitionSpec: {
       open: config,
       close: config,
     },gestureDirection:"vertical"}} name = "registerScreen" component={registerScreen}  />
+
             <Stack.Screen name="Root" options={{headerShown:false}} component={BottomTabNavigator} />
           </Stack.Navigator>
         </NavigationContainer>

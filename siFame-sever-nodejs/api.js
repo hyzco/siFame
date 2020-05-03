@@ -1,5 +1,7 @@
 import http from 'http';
+import path from 'path';
 import express from 'express';
+import fs from 'fs';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
 import cluster from 'cluster';
@@ -7,7 +9,7 @@ import faceRecog from './faceRecog/app.js';
 import * as imageCompressor from './faceRecog/library/imageCompressor.hyzcode';
 import { arrayScheme } from './faceRecog/library/jsonScheme.hyzcode';
 import * as DB from './faceRecog/library/mongoDB.hyzcode';
-
+import {data} from './dataxxx1.js';
 import sharp from 'sharp';
 import multer from 'multer';
 
@@ -34,154 +36,16 @@ var uploadProfile = multer({storage: storageProfile});
 
 
 const url = require('url');
-const fastJson = require('fast-json-stringify')
-
 var app = express();
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json()); //need to parse HTTP request body
-app.use('/uploads',express.static('uploads'));
+//app.use('/uploads',express.static('uploads'));
+app.use('/getDataFamePic',express.static(__dirname + '/faceRecog/library/Hasan'));
 
 let workers = [];
 
-const userImage = [
-	{
-		_id: 1,
-		image : "/1.jpg",
-		description: "User",
-		fame: false,
-		name: "Hasan Ali",
-		surname: "Yüzgeç",
-		age: "21",
-		ethnicity: "White",
-		nationality: "Turkish",
-		gender: "Female",
-	  },
-]
 
-const fameImage = [
-  {
-	image : "/2.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Hasan Ali",
-	surname: "Yüzgeç",
-	age: 21,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/3.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Hasan Ali",
-	surname: "Yüzgeç",
-	age: 21,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/4.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Hasan Ali",
-	surname: "Yüzgeç",
-	age: 21,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/5.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Armagan",
-	surname: "Demirci",
-	age: 23,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/6.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Ramazan",
-	surname: "Acikgoz",
-	age: 28,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/7.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Ramazan",
-	surname: "Acikgoz",
-	age: 28,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/8.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Marta Weronika",
-	surname: "Acikgoz",
-	age: 27,
-	ethnicity: "White",
-	nationality: "Polish",
-	gender: "Female",
-  },
-  {
-	image : "/9.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Ramazan",
-	surname: "Acikgoz",
-	age: 28,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-  {
-	image : "/10.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Marta Weronika",
-	surname: "Acikgoz",
-	age: 27,
-	ethnicity: "White",
-	nationality: "Polish",
-	gender: "Female",
-  },
-  {
-	image : "/11.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Marta Weronika",
-	surname: "Acikgoz",
-	age: 27,
-	ethnicity: "White",
-	nationality: "Polish",
-	gender: "Female",
-  },
-  {
-	image : "/12.jpg",
-	description: "Fame",
-	fame: true,
-	name: "Mustafa",
-	surname: "Öncü",
-	age: 24,
-	ethnicity: "White",
-	nationality: "Turkish",
-	gender: "Male",
-  },
-]
 
 function calculateMostN(data,size){
 	data.sort((a,b) => (a.distances > b.distances) ? 1 : ((b.distances > a.distances) ? -1 : 0));
@@ -287,10 +151,31 @@ const setUpExpress = () => {
 	});
 
 	app.get('/insertData', function(req,res){
-		DB.InsertData(fameImage);
+		DB.InsertData(data);
 		res.end("TEST");
 	});
 	
+	app.get("/cdnSiFame", (req, res) => {
+		var pathForCdn = null;		
+		if(req.query.fame == 'true'){
+					pathForCdn = path.join(__dirname, "/faceRecog/library/Hasan/"+req.query.image);
+						if(fs.existsSync(pathForCdn)){
+							res.sendFile(pathForCdn);
+						}else{
+							res.status(404).send("404");
+						}
+				}else if(req.query.fame == 'false'){
+					pathForCdn = path.join(__dirname, "/uploads/userPic/"+req.query.image);
+						if(fs.existsSync(pathForCdn)){
+							res.sendFile(pathForCdn);
+						}else{
+							res.status(404).send("404");
+						}
+				}else{
+					res.status(400).send("400");
+				}
+	});
+
 	app.get('/compressImg', function(req,res){
 		var requestURL = url.parse(req.url, true);
 		/**
@@ -319,15 +204,20 @@ const setUpExpress = () => {
 							}
 							else{
 								const checkIfFace = await faceRecog.checkIfFace(fileName);
-
+								let gender = null;
 									if(checkIfFace){
+										if(checkIfFace.gender == "male"){
+											gender = "Male";
+										}else if(checkIfFace.gender == "female"){
+											gender = "Female";
+										} 
 										data = {
 											name : user.name,
 											surname: user.surname,
 											image: fileName,
 											age: user.age,
 											nationality: user.nationality,
-											gender: user.gender
+											gender: gender,
 										};
 	
 										DB.InsertData(data,true);
@@ -384,7 +274,7 @@ const setUpExpress = () => {
 				gender: req.body.gender,
 			}
 			const getUserData = await getDataFromDB(condition.gender,condition);
-			const getFameData = await getDataFromDB(condition.gender,{ok:false,random:true,size:15});
+			const getFameData = await getDataFromDB(condition.gender,{ok:false,random:true,size:40});
 			const resultFaceRecog = await faceRecog.faceRecog(getUserData,getFameData)
 			const result = calculateMostN(resultFaceRecog,6);
 			
