@@ -1,5 +1,5 @@
 # siFame
-siFame is finding most similar fame person to you and you can learn how many percent you are similar with your friend in your Instagram.
+siFame is finding most similar fame person to you.
 
 Getting user photo from client-side(s)
 and measuring how similar user (face) photo with fame (face) photos in MongoDB.
